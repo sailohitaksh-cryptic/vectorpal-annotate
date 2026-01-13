@@ -46,25 +46,13 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     const hasTwoImages = questionResult.rows[0].has_two_images;
 
-    // Validate that descriptions are provided
-    if (!imageADescription || imageADescription.trim() === '') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Description for Image A is required' 
-      });
-    }
-
-    if (hasTwoImages && (!imageBDescription || imageBDescription.trim() === '')) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Description for Image B is required' 
-      });
-    }
-
+    // For auto-save: Allow partial saves (don't require all fields filled)
+    // But only mark as completed if ALL required fields are filled
+    
     // Check if both descriptions are filled (for completion status)
     const isCompleted = hasTwoImages 
-      ? imageADescription.trim() !== '' && imageBDescription.trim() !== ''
-      : imageADescription.trim() !== '';
+      ? (imageADescription && imageADescription.trim() !== '' && imageBDescription && imageBDescription.trim() !== '')
+      : (imageADescription && imageADescription.trim() !== '');
 
     // Upsert annotation
     const result = await sql`

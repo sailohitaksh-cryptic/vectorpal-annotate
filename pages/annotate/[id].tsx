@@ -96,7 +96,7 @@ export default function Annotate() {
   };
 
   const saveAndNavigate = async (direction: 'next' | 'previous') => {
-    // Save current annotations if there's any content
+    // Save current annotations if there's any content (allows partial saves)
     const hasContent = imageADescription.trim() !== '' || imageBDescription.trim() !== '';
     
     if (hasContent) {
@@ -169,6 +169,54 @@ export default function Annotate() {
   const getPreviousQuestion = () => {
     saveAndNavigate('previous');
   };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to clear this annotation? This will send the question back to unannotated.')) {
+      return;
+    }
+
+    setError('');
+    setSuccess('');
+    setSaving(true);
+
+    try {
+      const response = await fetch('/api/annotations/save', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          questionNumber: question?.questionNumber,
+          imageADescription: '',
+          imageBDescription: '',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setSuccess('Annotation cleared successfully');
+        setImageADescription('');
+        setImageBDescription('');
+        
+        // Redirect to dashboard after 1 second
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 1000);
+      } else {
+        setError(data.message || 'Failed to clear annotation');
+      }
+    } catch (err) {
+      setError('An error occurred while clearing');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Allow submit/update if there's any change from the loaded state
+  const hasChanges = 
+    imageADescription !== (question?.imageADescription || '') ||
+    imageBDescription !== (question?.imageBDescription || '');
 
   const canSubmit = question?.hasTwoImages
     ? imageADescription.trim() !== '' && imageBDescription.trim() !== ''
@@ -283,12 +331,27 @@ export default function Annotate() {
                 Previous
               </button>
 
+              {isEditing && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={saving}
+                  style={{
+                    ...styles.deleteButton,
+                    ...(saving ? styles.disabledButton : {}),
+                  }}
+                  title="Clear this annotation and send back to unannotated"
+                >
+                  {saving ? 'Clearing...' : 'Clear'}
+                </button>
+              )}
+
               <button
                 type="submit"
-                disabled={!canSubmit || saving}
+                disabled={(!canSubmit && !hasChanges) || saving}
                 style={{
                   ...styles.submitButton,
-                  ...(!canSubmit || saving ? styles.submitButtonDisabled : {}),
+                  ...((!canSubmit && !hasChanges) || saving ? styles.submitButtonDisabled : {}),
                 }}
               >
                 {saving ? 'Saving...' : isEditing ? 'Update' : 'Submit'}
@@ -469,6 +532,16 @@ const styles = {
     fontSize: '14px',
     fontWeight: '500',
     cursor: 'pointer',
+  },
+  deleteButton: {
+    padding: '12px 24px',
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
   },
   submitButton: {
     padding: '12px 32px',

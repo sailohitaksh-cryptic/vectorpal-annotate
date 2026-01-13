@@ -18,7 +18,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     if (questionNumber === undefined || questionNumber === null || isNaN(questionNumber)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Question number is required' 
+        message: 'Valid question number is required' 
       });
     }
 

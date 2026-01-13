@@ -16,7 +16,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
     }
 
     if (isNaN(questionNumber) || questionNumber < 0) {
-      return res.status(400).json({ success: false, message: 'Question number is required' });
+      return res.status(400).json({ success: false, message: 'Invalid question number' });
     }
 
     // Check if user is assigned to this question

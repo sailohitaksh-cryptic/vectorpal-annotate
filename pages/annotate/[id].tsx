@@ -118,6 +118,9 @@ export default function Annotate() {
         if (!data.success) {
           console.error('Auto-save failed:', data.message);
         }
+        
+        // Wait a moment for the save to fully complete
+        await new Promise(resolve => setTimeout(resolve, 300));
       } catch (err) {
         console.error('Error saving before navigation:', err);
         // Continue navigation even if save fails
@@ -126,11 +129,11 @@ export default function Annotate() {
       }
     }
 
-    // Navigate to next/previous question
+    // Navigate to next/previous question AFTER save completes
     if (question) {
       if (direction === 'next') {
         router.push(`/annotate/${question.questionNumber + 1}`);
-      } else if (direction === 'previous' && question.questionNumber > 0) {
+      } else if (direction === 'previous' && question.questionNumber >= 0) {
         router.push(`/annotate/${question.questionNumber - 1}`);
       }
     }

@@ -26,7 +26,7 @@ export default function Annotate() {
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (id !== undefined && id !== null) {
       fetchQuestion();
     }
   }, [id]);

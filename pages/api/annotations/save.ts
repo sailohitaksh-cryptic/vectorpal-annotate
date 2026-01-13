@@ -15,7 +15,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
 
-    if (!questionNumber) {
+    if (questionNumber === undefined || questionNumber === null || isNaN(questionNumber)) {
       return res.status(400).json({ 
         success: false, 
         message: 'Question number is required' 

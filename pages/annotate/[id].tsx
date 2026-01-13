@@ -129,13 +129,36 @@ export default function Annotate() {
       }
     }
 
-    // Navigate to next/previous question AFTER save completes
-    if (question) {
-      if (direction === 'next') {
-        router.push(`/annotate/${question.questionNumber + 1}`);
-      } else if (direction === 'previous' && question.questionNumber >= 0) {
-        router.push(`/annotate/${question.questionNumber - 1}`);
+    // Fetch user's assigned questions to find next/previous
+    try {
+      const response = await fetch('/api/questions/list');
+      const data = await response.json();
+      
+      if (data.success && data.questions) {
+        const assignedQuestions = data.questions.map((q: any) => q.question_number).sort((a: number, b: number) => a - b);
+        const currentIndex = assignedQuestions.indexOf(question?.questionNumber);
+        
+        let targetQuestion = null;
+        if (direction === 'next' && currentIndex < assignedQuestions.length - 1) {
+          targetQuestion = assignedQuestions[currentIndex + 1];
+        } else if (direction === 'previous' && currentIndex > 0) {
+          targetQuestion = assignedQuestions[currentIndex - 1];
+        }
+        
+        if (targetQuestion !== null) {
+          router.push(`/annotate/${targetQuestion}`);
+        } else {
+          // No more questions in that direction, go to dashboard
+          router.push('/dashboard');
+        }
+      } else {
+        // Fallback: go to dashboard if can't fetch questions
+        router.push('/dashboard');
       }
+    } catch (err) {
+      console.error('Error fetching assigned questions:', err);
+      // Fallback: go to dashboard
+      router.push('/dashboard');
     }
   };
 

@@ -21,6 +21,7 @@ export default function Annotate() {
   const [imageBDescription, setImageBDescription] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isEditing, setIsEditing] = useState(false);
@@ -94,16 +95,53 @@ export default function Annotate() {
     }
   };
 
-  const getNextQuestion = () => {
+  const saveAndNavigate = async (direction: 'next' | 'previous') => {
+    // Save current annotations if there's any content
+    const hasContent = imageADescription.trim() !== '' || imageBDescription.trim() !== '';
+    
+    if (hasContent) {
+      setAutoSaving(true);
+      try {
+        const response = await fetch('/api/annotations/save', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            questionNumber: question?.questionNumber,
+            imageADescription: imageADescription.trim(),
+            imageBDescription: imageBDescription.trim(),
+          }),
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+          console.error('Auto-save failed:', data.message);
+        }
+      } catch (err) {
+        console.error('Error saving before navigation:', err);
+        // Continue navigation even if save fails
+      } finally {
+        setAutoSaving(false);
+      }
+    }
+
+    // Navigate to next/previous question
     if (question) {
-      router.push(`/annotate/${question.questionNumber + 1}`);
+      if (direction === 'next') {
+        router.push(`/annotate/${question.questionNumber + 1}`);
+      } else if (direction === 'previous' && question.questionNumber > 0) {
+        router.push(`/annotate/${question.questionNumber - 1}`);
+      }
     }
   };
 
+  const getNextQuestion = () => {
+    saveAndNavigate('next');
+  };
+
   const getPreviousQuestion = () => {
-    if (question && question.questionNumber > 1) {
-      router.push(`/annotate/${question.questionNumber - 1}`);
-    }
+    saveAndNavigate('previous');
   };
 
   const canSubmit = question?.hasTwoImages
@@ -142,6 +180,7 @@ export default function Annotate() {
 
         {success && <div style={styles.successMessage}>{success}</div>}
         {error && <div style={styles.errorMessage}>{error}</div>}
+        {autoSaving && <div style={styles.autoSaveIndicator}>Auto-saving...</div>}
 
         <div style={styles.content}>
           <div style={styles.instructionsPanel}>
@@ -209,10 +248,10 @@ export default function Annotate() {
               <button
                 type="button"
                 onClick={getPreviousQuestion}
-                disabled={question?.questionNumber === 1}
+                disabled={question?.questionNumber === 0}
                 style={{
                   ...styles.navButton,
-                  ...(question?.questionNumber === 1 ? styles.disabledButton : {}),
+                  ...(question?.questionNumber === 0 ? styles.disabledButton : {}),
                 }}
               >
                 Previous
@@ -301,6 +340,15 @@ const styles = {
     color: '#ffffff',
     borderRadius: '6px',
     textAlign: 'center' as const,
+  },
+  autoSaveIndicator: {
+    margin: '24px 48px',
+    padding: '12px',
+    backgroundColor: '#3b82f6',
+    color: '#ffffff',
+    borderRadius: '6px',
+    textAlign: 'center' as const,
+    fontSize: '14px',
   },
   error: {
     padding: '16px',

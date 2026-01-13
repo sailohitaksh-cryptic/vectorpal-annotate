@@ -46,13 +46,17 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
 
     const hasTwoImages = questionResult.rows[0].has_two_images;
 
+    // Safely handle descriptions - default to empty string if undefined
+    const descA = imageADescription ? imageADescription.trim() : '';
+    const descB = imageBDescription ? imageBDescription.trim() : '';
+
     // For auto-save: Allow partial saves (don't require all fields filled)
     // But only mark as completed if ALL required fields are filled
     
     // Check if both descriptions are filled (for completion status)
     const isCompleted = hasTwoImages 
-      ? (imageADescription && imageADescription.trim() !== '' && imageBDescription && imageBDescription.trim() !== '')
-      : (imageADescription && imageADescription.trim() !== '');
+      ? (descA !== '' && descB !== '')
+      : (descA !== '');
 
     // Upsert annotation
     const result = await sql`
@@ -67,15 +71,15 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       VALUES (
         ${userId}, 
         ${questionNumber}, 
-        ${imageADescription.trim()}, 
-        ${hasTwoImages ? imageBDescription.trim() : null}, 
+        ${descA}, 
+        ${hasTwoImages ? descB : null}, 
         ${isCompleted},
         CURRENT_TIMESTAMP
       )
       ON CONFLICT (user_id, question_number) 
       DO UPDATE SET 
-        image_a_description = ${imageADescription.trim()},
-        image_b_description = ${hasTwoImages ? imageBDescription.trim() : null},
+        image_a_description = ${descA},
+        image_b_description = ${hasTwoImages ? descB : null},
         is_completed = ${isCompleted},
         updated_at = CURRENT_TIMESTAMP
       RETURNING id, is_completed

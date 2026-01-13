@@ -67,7 +67,7 @@ export async function initializeDatabase() {
   }
 }
 
-// Populate questions table with all 129 questions (excluding question 98)
+// Populate questions table based on actual images in the repository
 export async function populateQuestions() {
   try {
     // Check if questions already exist
@@ -78,34 +78,54 @@ export async function populateQuestions() {
       return { success: true, message: 'Questions already exist' };
     }
 
-    // List of questions that have two images (based on your GitHub repo structure)
-    // These are the couplets with 'y' and 'n' variants
+    // Based on actual images in mosquitonator/images directory
+    
+    // Questions with ONE image only
+    const singleImageQuestions = [0, 1, 2];
+    
+    // Questions with TWO images (y/n pairs)
     const twoImageQuestions = [
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-      21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
-      39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
-      57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74,
-      75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
-      93, 94, 95, 96, 97, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
-      110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124,
-      125, 126, 127, 128, 129
+      3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+      21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40,
+      41, 42, 43, 44, 45, 46, 49, 50, 51, 52, 53, 55, 56, 57, 58, 59, 60,
+      61, 62, 63, 64, 65, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80,
+      81, 82, 83, 84, 85, 87, 88, 89, 90, 91, 92, 93, 95, 96, 97, 99,
+      100, 101, 102, 103, 104, 105, 106, 107, 110, 111, 112, 114, 115, 116, 117,
+      119, 120, 121, 122, 123, 124, 125, 126, 127
     ];
 
-    // Insert all questions
-    for (const qNum of twoImageQuestions) {
-      const hasTwoImages = true; // Most have two images based on your repo
-      const imageAPath = `/images/${qNum}y.png`;
-      const imageBPath = `/images/${qNum}n.png`;
-
+    // Insert single-image questions
+    for (const qNum of singleImageQuestions) {
       await sql`
         INSERT INTO questions (question_number, has_two_images, image_a_path, image_b_path, is_active)
-        VALUES (${qNum}, ${hasTwoImages}, ${imageAPath}, ${imageBPath}, true)
+        VALUES (${qNum}, false, ${`/images/${qNum}.png`}, NULL, true)
         ON CONFLICT (question_number) DO NOTHING
       `;
     }
 
-    console.log('Questions populated successfully');
-    return { success: true, message: 'Questions populated' };
+    // Insert two-image questions
+    for (const qNum of twoImageQuestions) {
+      await sql`
+        INSERT INTO questions (question_number, has_two_images, image_a_path, image_b_path, is_active)
+        VALUES (${qNum}, true, ${`/images/${qNum}y.png`}, ${`/images/${qNum}n.png`}, true)
+        ON CONFLICT (question_number) DO NOTHING
+      `;
+    }
+
+    const totalQuestions = singleImageQuestions.length + twoImageQuestions.length;
+    console.log(`Questions populated successfully - ${totalQuestions} questions total`);
+    console.log(`Single image questions: ${singleImageQuestions.length}`);
+    console.log(`Two image questions: ${twoImageQuestions.length}`);
+    
+    return { 
+      success: true, 
+      message: `${totalQuestions} questions populated`,
+      breakdown: {
+        singleImage: singleImageQuestions.length,
+        twoImages: twoImageQuestions.length,
+        total: totalQuestions
+      }
+    };
   } catch (error) {
     console.error('Error populating questions:', error);
     return { success: false, error };
